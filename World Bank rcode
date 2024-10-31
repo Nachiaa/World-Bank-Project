@@ -1,0 +1,51 @@
+# Load necessary libraries
+
+# Convert to a time series object
+us_gdp_ts <- ts(us_data$gdp, start = min(us_data$year), frequency = 1)
+
+# Apply ARIMA model
+arima_model <- auto.arima(us_gdp_ts)
+
+# Forecast GDP for the next 5 years
+gdp_forecast <- forecast(arima_model, h = 5)
+print(gdp_forecast)
+
+# Plot forecast
+autoplot(gdp_forecast) +
+  ggtitle("GDP Forecast for United States") +
+  labs(x = "Year", y = "GDP") +
+  theme_minimal()
+
+# Load necessary libraries
+library(cluster)
+library(dplyr)
+library(ggplot2)
+
+# Load cleaned data
+data <- read_csv("data/cleaned_world_bank_data.csv")
+
+# Select relevant columns for clustering (e.g., GDP, life expectancy, population growth)
+clustering_data <- data %>%
+  group_by(country) %>%
+  summarise(gdp = mean(gdp, na.rm = TRUE),
+            life_expectancy = mean(life_expectancy, na.rm = TRUE),
+            population_growth = mean(population_growth, na.rm = TRUE))
+
+# Scale data for clustering
+scaled_data <- scale(clustering_data %>% select(-country))
+
+# Determine optimal number of clusters using Elbow Method
+wss <- sapply(1:10, function(k) kmeans(scaled_data, centers = k, nstart = 10)$tot.withinss)
+plot(1:10, wss, type = "b", xlab = "Number of Clusters", ylab = "Total Within-Cluster Sum of Squares", main = "Elbow Method")
+
+# Apply K-Means Clustering with optimal number of clusters
+set.seed(42)
+kmeans_result <- kmeans(scaled_data, centers = 3)
+clustering_data$cluster <- as.factor(kmeans_result$cluster)
+
+# Plot clusters
+ggplot(clustering_data, aes(x = gdp, y = life_expectancy, color = cluster)) +
+  geom_point(size = 3) +
+  ggtitle("Country Clustering Based on GDP and Life Expectancy") +
+  labs(x = "GDP", y = "Life Expectancy") +
+  theme_minimal()
